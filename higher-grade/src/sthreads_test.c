@@ -11,6 +11,52 @@
     You may add your own functions or change these functions to your liking.
 ********************************************************************************/
 
+#define TEST 1
+
+/* Prints the sequence 0, 1, 2, .... INT_MAX over and over again.
+ */
+void numbers_timeout() {
+  int n = 0;
+  while (true) {
+    printf(" n = %d\n", n);
+    n = (n + 1) % (INT_MAX);
+  }
+}
+
+/* Prints the sequence a, b, c, ..., z over and over again.
+ */
+void letters_timeout() {
+  char c = 'a';
+
+  while (true) {
+      printf(" c = %c\n", c);
+      c = (c == 'z') ? 'a' : c + 1;
+	}
+}
+
+/* Prints the sequence 0, 1, 2, .... INT_MAX over and over again.
+ */
+void numbers_yield() {
+  int n = 0;
+  while (true) {
+    printf(" n = %d\n", n);
+    n = (n + 1) % (INT_MAX);
+		yield() ;
+  }
+}
+
+/* Prints the sequence a, b, c, ..., z over and over again. Yield
+ */
+void letters_yield() {
+  char c = 'a';
+
+  while (true) {
+  	printf(" c = %c\n", c);
+  	c = (c == 'z') ? 'a' : c + 1;
+		yield() ;
+	}
+}
+
 /* Prints the sequence 0, 1, 2, .... INT_MAX over and over again.
  */
 void numbers() {
@@ -67,7 +113,7 @@ void fibonacci_slow() {
       // Restart on overflow.
       n = 0;
     }
-    printf(" fib(%02d) = %d\n", n, fib(n));
+    printf(" fib_slow(%02d) = %d\n", n, fib(n));
     n = (n + 1) % INT_MAX;
   }
 }
@@ -85,7 +131,7 @@ void fibonacci_fast() {
   int next = a + b;
 
   while(true) {
-    printf(" fib(%02d) = %d\n", n, a);
+    printf(" fib_fast(%02d) = %d\n", n, a);
     next = a + b;
     a = b;
     b = next;
@@ -130,4 +176,36 @@ int main(){
   puts("\n==== Test program for the Simple Threads API ====\n");
 
   init(); // Initialization
+
+#if TEST==1 // done&join test
+  spawn(numbers) ;
+  spawn(numbers) ;
+  spawn(numbers) ;
+	
+	int a = join() ;
+	printf("join %d\n", a) ;
+	yield() ;
+	yield() ;
+	int b = join() ;
+	printf("join %d\n", b) ;
+	int c = join() ;
+	printf("join %d\n", c) ;
+
+#elif TEST==2 // cooperative scheduling test
+	spawn(numbers_yield) ;
+	spawn(letters_yield) ;
+	
+	while(1) {
+		printf("main\n") ;
+		yield() ;
+	}
+#elif TEST==3 // preemptive scheduling test
+	spawn(numbers_timeout) ;
+	spawn(letters_timeout) ;
+	spawn(fibonacci_fast) ;
+	
+	while(1)
+		printf("main\n") ;
+
+#endif
 }
