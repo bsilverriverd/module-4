@@ -31,6 +31,18 @@ struct thread {
   thread_t *next; /* can use this to create a linked list of threads */
 };
 
+typedef struct sthreads_mutex sthreads_mutex_t ;
+
+struct sthreads_mutex {
+	int flag ;	
+} ;
+
+typedef struct sthreads_cond sthreads_cond_t ;
+
+struct sthreads_cond {
+	thread_t * head ;	
+	thread_t * tail ;	
+} ;
 
 /*******************************************************************************
                                Simple Threads API
@@ -85,5 +97,27 @@ void  done();
    terminated thread.
 */
 tid_t join();
+
+/* Thread termination
+
+	A thread calling terminate() will change state from running to terminated. It
+	will then remove itself from the thread list and let the thread scheduler 
+	dispatch one of the ready threads. It does not change the state of waiting threads.
+*/
+void terminate();
+
+void sthreads_mutex_init (sthreads_mutex_t * m) ;
+
+void sthreads_mutex_lock (sthreads_mutex_t * m) ;
+
+void sthreads_mutex_unlock (sthreads_mutex_t * m) ;
+
+void sthreads_cond_init (sthreads_cond_t * c) ;
+
+void sthreads_cond_wait (sthreads_cond_t * c, sthreads_mutex_t * m) ;
+
+void sthreads_cond_signal (sthreads_cond_t * c) ;
+
+
 
 #endif

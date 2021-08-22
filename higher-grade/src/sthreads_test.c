@@ -11,7 +11,7 @@
     You may add your own functions or change these functions to your liking.
 ********************************************************************************/
 
-#define TEST 1
+#define TEST 3
 
 /* Prints the sequence 0, 1, 2, .... INT_MAX over and over again.
  */
@@ -41,7 +41,7 @@ void numbers_yield() {
   while (true) {
     printf(" n = %d\n", n);
     n = (n + 1) % (INT_MAX);
-		yield() ;
+	yield() ;
   }
 }
 
@@ -199,6 +199,7 @@ int main(){
 		printf("main\n") ;
 		yield() ;
 	}
+
 #elif TEST==3 // preemptive scheduling test
 	spawn(numbers_timeout) ;
 	spawn(letters_timeout) ;

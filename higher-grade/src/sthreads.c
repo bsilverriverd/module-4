@@ -30,7 +30,7 @@
 #include <string.h> /* memset() */
 #include <sys/time.h> /* ITIMER_REAL, ITIMER_VIRTUAL, ITIMER_PROF, struct itimerval, setitimer() */
 
-#define TIMEOUT 50 //ms
+#define TIMEOUT 25 //ms
 #define TIMER_TYPE ITIMER_VIRTUAL // Type of timer
 
 thread_t * head = 0x0 ;
@@ -110,9 +110,34 @@ disarm_timer ()
 }
 
 void
+pause_timer (struct itimerval * old)
+{
+	struct itimerval timer ;
+	timer.it_value.tv_sec = 0 ;
+	timer.it_value.tv_usec = 0 ;
+	timer.it_interval.tv_sec = 0 ;
+	timer.it_interval.tv_usec = 0 ;
+
+	if (setitimer(TIMER_TYPE, &timer, old) < 0) {
+		perror("pause_timer") ;
+		exit(EXIT_FAILURE) ;
+	}
+}
+
+void
+resume_timer (struct itimerval * new) {
+	if (setitimer(TIMER_TYPE, new, 0x0) < 0) {
+		perror("resume_timer") ;
+		exit(EXIT_FAILURE) ;
+	}
+}
+
+void
 scheduler ()
 {
 	thread_t * curr = cursor ;
+	if (curr == 0x0)
+		return ;
 	for (cursor = cursor->next; cursor; cursor = cursor->next) {
 		if (cursor->state == ready) {
 			cursor->state = running ;
@@ -148,7 +173,6 @@ scheduler ()
 /*******************************************************************************
                     Implementation of the Simple Threads API
 ********************************************************************************/
-
 
 int init(){
 	if (head != 0x0)
@@ -203,7 +227,7 @@ tid_t spawn(void (*start)()){
 	spawn->next = head ;
 	head = spawn ;
 
-	set_timer() ;
+	yield() ;
 	return spawn->tid ;
 }
 
@@ -225,7 +249,7 @@ void yield(){
 	scheduler() ;
 }
 
-void  done(){
+void done(){
 	disarm_timer() ;
 	int flag = 0 ;
 	while (!flag) {
@@ -275,4 +299,62 @@ tid_t join() {
 		}
 	}
 	return ret ;
+}
+
+void sthreads_mutex_init (sthreads_mutex_t * m) {
+	m->flag = 0 ;
+}
+
+void sthreads_mutex_lock (sthreads_mutex_t * m) {
+	struct itimerval tmp ;
+	pause_timer(&tmp) ;
+	while (m->flag == 1)
+		yield() ;
+	m->flag = 1 ;
+	resume_timer(&tmp) ;
+}
+
+void sthreads_mutex_unlock (sthreads_mutex_t * m) {
+	m->flag = 0 ;
+}
+
+void sthreads_cond_init (sthreads_cond_t * c) {
+	c->head = 0x0 ;
+	c->tail = 0x0 ;
+}
+
+void sthreads_cond_wait (sthreads_cond_t * c, sthreads_mutex_t * m) {
+	disable_timer() ;
+	if (cursor->state == running) {
+		cursor->state = waiting ;
+	} else {
+		perror("sthreads_cond_wait") ;
+		exit(EXIT_FAILURE) ;
+	}
+	thread * prev = 0x0 ;
+	for (thread * iter = head; iter; prev = iter, iter = iter->next) {
+		if (iter == cursor) {
+			if (prev == 0x0)
+				head = head->next ;
+			else
+				prev->next = iter->next ;
+			cursor->next = c->head ;
+			c->head = cursor ;
+			if (c->tail == 0x0)
+				c->tail = c->head ;
+			cursor = head ;
+			break ;
+		}
+	}
+	scheduler() ;
+	sthreads_mutex_lock(m) ;
+}
+
+void sthreads_cond_signal (sthreads_cond_t * c) {
+	if (c->tail == 0x0)
+		return ;
+	
+	c->tail->state = ready ;
+	c->tail->next = head ;
+
 }
