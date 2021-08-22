@@ -319,8 +319,8 @@ void sthreads_mutex_unlock (sthreads_mutex_t * m) {
 }
 
 void sthreads_cond_init (sthreads_cond_t * c) {
-	c->head = 0x0 ;
-	c->tail = 0x0 ;
+	c->front = 0x0 ;
+	c->rear = 0x0 ;
 }
 
 void sthreads_cond_wait (sthreads_cond_t * c, sthreads_mutex_t * m) {
@@ -338,23 +338,28 @@ void sthreads_cond_wait (sthreads_cond_t * c, sthreads_mutex_t * m) {
 				head = head->next ;
 			else
 				prev->next = iter->next ;
-			cursor->next = c->head ;
-			c->head = cursor ;
-			if (c->tail == 0x0)
-				c->tail = c->head ;
-			cursor = head ;
+			cursor->next = 0x0 ;
+			if (c->rear == 0x0) {
+				c->rear = cursor ;
+				c->head = cursor ;
+			} else {
+				c->rear->next = cursor ;
+				c->rear = cursor ;
+			}
 			break ;
 		}
 	}
+	sthread_mutex_unlock(m) ;
 	scheduler() ;
 	sthreads_mutex_lock(m) ;
 }
 
 void sthreads_cond_signal (sthreads_cond_t * c) {
-	if (c->tail == 0x0)
+	if (c->front == 0x0)
 		return ;
-	
-	c->tail->state = ready ;
-	c->tail->next = head ;
+	thread * temp = c->front->next ;
+	c->front->state = ready ;
+	c->front->next = head ;
+	c->front = temp ;
 
 }

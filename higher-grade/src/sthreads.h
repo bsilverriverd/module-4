@@ -40,8 +40,8 @@ struct sthreads_mutex {
 typedef struct sthreads_cond sthreads_cond_t ;
 
 struct sthreads_cond {
-	thread_t * head ;	
-	thread_t * tail ;	
+	thread_t * front ;	
+	thread_t * rear ;	
 } ;
 
 /*******************************************************************************
